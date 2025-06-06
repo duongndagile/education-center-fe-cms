@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Box, Button, Flex } from "@chakra-ui/react";
-import styles from "./index.module.scss";
+import styles from "../../styles/layout/DashboardLayout.module.scss";
 import { clearTokens } from "@/stores/auth";
 import { ROUTE_PATH } from "@/routes/routes.constant";
 

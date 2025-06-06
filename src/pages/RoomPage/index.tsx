@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Box,
   Button,
@@ -5,11 +6,11 @@ import {
   useDisclosure,
   CloseButton,
   Input,
+  Table,
+  Spinner,
   Stack,
   IconButton,
 } from "@chakra-ui/react";
-import {  } from "@chakra-ui/hooks";
-import { Table, Thead, Tbody, Tr, Th, Td } from "@chakra-ui/table";
 import {
   Modal,
   ModalOverlay,
@@ -20,18 +21,25 @@ import {
 } from "@chakra-ui/modal";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { useEffect, useState } from "react";
+import {
+  useCreateRoom,
+  useDeleteRoom,
+  useGetAllRooms,
+  useUpdateRoom,
+} from "@/hooks/useRoom";
+import type { RoomFormValues } from "@/api/room";
+import { toaster } from "@/helpers/toaster";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
 type Room = {
-  id: number;
+  _id: string;
   name: string;
+  capacity: number;
   description: string;
-};
-
-type RoomFormValues = {
-  name: string;
-  description: string;
+  address: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export const RoomPage = () => {
@@ -39,40 +47,73 @@ export const RoomPage = () => {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const { open, onOpen, onClose } = useDisclosure();
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-  } = useForm<RoomFormValues>();
-  
+  const { register, handleSubmit, reset } = useForm<RoomFormValues>();
+  const { mutate } = useCreateRoom();
+  const { data: roomsData, isPending, mutate: getAllRooms } = useGetAllRooms();
+  const { mutate: deleteRoom } = useDeleteRoom();
+  const { mutate: updateRoom } = useUpdateRoom();
+
+  useEffect(() => {
+    getAllRooms();
+  }, [getAllRooms]);
+
+  useEffect(() => {
+    if (roomsData) {
+      setRooms(roomsData);
+    }
+  }, [roomsData]);
+
+  useEffect(() => {
+    if (editingRoom) {
+      reset({
+        name: editingRoom.name,
+        capacity: editingRoom.capacity,
+        description: editingRoom.description,
+        addressAt: editingRoom.address,
+      });
+    }
+  }, [editingRoom, reset]);
+
   const onSubmit = (data: RoomFormValues) => {
     if (editingRoom) {
-      // Cập nhật phòng
-      setRooms((prev) =>
-        prev.map((r) => (r.id === editingRoom.id ? { ...r, ...data } : r))
+      updateRoom(
+        { id: editingRoom._id, data },
+        {
+          onSuccess: () => {
+            handleShowToast("Cập nhật phòng thành công", "success");
+            setEditingRoom(null);
+            onClose();
+            getAllRooms();
+          },
+          onError: (error: any) => {
+            console.error("Failed to update room:", error);
+            handleShowToast("Cập nhật phòng thất bại", "error");
+          },
+        }
       );
     } else {
-      // Thêm phòng mới
-      const newRoom: Room = {
-        id: Date.now(),
-        ...data,
-      };
-      setRooms((prev) => [...prev, newRoom]);
+      mutate(data, {
+        onSuccess: (response) => {
+          setRooms((prev) => [...prev, response]);
+          handleShowToast("Đã thêm phòng thành công", "success");
+          onClose();
+          reset();
+        },
+        onError: (error: any) => {
+          console.error("Failed to create room:", error);
+          handleShowToast("Thêm phòng thất bại", "error");
+        },
+      });
     }
-
-    reset();
-    setEditingRoom(null);
-    onClose();
   };
 
-  const handleEdit = (room: Room) => {
-    setEditingRoom(room);
-    reset(room); // fill form với data
-    onOpen();
-  };
-
-  const handleDelete = (roomId: number) => {
-    setRooms((prev) => prev.filter((room) => room.id !== roomId));
+  const handleShowToast = (message: string, status: "success" | "error") => {
+    toaster({
+      title: status === "success" ? "Thành công" : "Lỗi",
+      description: message,
+      duration: 3000,
+    });
+    console.log("handleShowToast", message, status);
   };
 
   const handleAddRoom = () => {
@@ -81,7 +122,36 @@ export const RoomPage = () => {
     onOpen();
   };
 
-  // const modalBg = useColorModeValue('white', 'gray.800');
+  const handleEdit = (room: Room) => {
+    console.log("handleEdit", room);
+    reset();
+    setEditingRoom(room);
+    onOpen();
+    // setEditingRoom(room);
+    // onOpen();
+  };
+
+  const handleDelete = (id: string) => {
+    deleteRoom(id, {
+      onSuccess: (response) => {
+        console.log("Delete room successful", response);
+        handleShowToast("Đã xoá phòng thành công", "success");
+        getAllRooms();
+      },
+      onError: (error: any) => {
+        console.error("Delete room failed", error);
+        handleShowToast("Xoá phòng thất bại", "error");
+      },
+    });
+  };
+
+  if (isPending) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" h="100vh">
+        <Spinner />
+      </Box>
+    );
+  }
 
   return (
     <Box p={4}>
@@ -90,46 +160,58 @@ export const RoomPage = () => {
         Thêm phòng
       </Button>
 
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Tên phòng</Th>
-            <Th>Mô tả</Th>
-            <Th>Hành động</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {rooms.map((room) => (
-            <Tr key={room.id}>
-              <Td>{room.name}</Td>
-              <Td>{room.description}</Td>
-              <Td>
+      <Table.Root size="sm" striped>
+        <Table.Header>
+          <Table.Row>
+            <Table.ColumnHeader>Name</Table.ColumnHeader>
+            <Table.ColumnHeader>Capacity</Table.ColumnHeader>
+            <Table.ColumnHeader>Description</Table.ColumnHeader>
+            <Table.ColumnHeader>Address</Table.ColumnHeader>
+            <Table.ColumnHeader>Action</Table.ColumnHeader>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {rooms?.map((item, index) => (
+            <Table.Row key={`${Date.now()}-${index}`}>
+              <Table.Cell>{item.name}</Table.Cell>
+              <Table.Cell>{item.capacity}</Table.Cell>
+              <Table.Cell>{item.description}</Table.Cell>
+              <Table.Cell>{item.address}</Table.Cell>
+              <Table.Cell textAlign="end">
                 <Stack direction="row" padding={2}>
                   <IconButton
                     aria-label="Sửa"
-                    size="sm"
-                    onClick={() => handleEdit(room)}
+                    size="xs"
+                    onClick={() => handleEdit(item)}
                   >
                     <FaEdit />
                   </IconButton>
                   <IconButton
                     aria-label="Xoá"
-                    size="sm"
+                    size="xs"
                     colorScheme="red"
-                    onClick={() => handleDelete(room.id)}
+                    onClick={() => handleDelete(item._id)}
                   >
                     <FaTrash />
                   </IconButton>
                 </Stack>
-              </Td>
-            </Tr>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </Tbody>
-      </Table>
+        </Table.Body>
+      </Table.Root>
 
-      <Modal isOpen={open} onClose={onClose}>
+      <Box display="flex" justifyContent="center" alignItems="center">
+      <Modal isOpen={open} onClose={onClose} isCentered>
         <ModalOverlay />
-        <ModalContent  bg='white' borderRadius="lg" p={4}>
+        <ModalContent
+          bg="white"
+          borderRadius="lg"
+          px={6}
+          py={4}
+          maxW="500px"
+          boxShadow="lg"
+        >
           <ModalHeader>{editingRoom ? "Sửa phòng" : "Thêm phòng"}</ModalHeader>
           <CloseButton
             position="absolute"
@@ -139,17 +221,27 @@ export const RoomPage = () => {
           />
           <form onSubmit={handleSubmit(onSubmit)}>
             <ModalBody>
-              <FormControl isRequired mb={4}>
-                <FormLabel>Tên phòng</FormLabel>
-                <Input {...register("name", { required: true })} />
-              </FormControl>
+              <ModalBody>
+                <FormControl isRequired mb={4}>
+                  <FormLabel>Tên phòng</FormLabel>
+                  <Input {...register("name", { required: true })} />
+                </FormControl>
 
-              <FormControl>
-                <FormLabel>Mô tả</FormLabel>
-                <Input {...register("description")} />
-              </FormControl>
+                <FormControl>
+                  <FormLabel>Sức chứa</FormLabel>
+                  <Input {...register("capacity")} />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Mô tả</FormLabel>
+                  <Input {...register("description")} />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Địa chỉ</FormLabel>
+                  <Input {...register("addressAt")} />
+                </FormControl>
+              </ModalBody>
             </ModalBody>
-
             <ModalFooter>
               <Button onClick={onClose} mr={3}>
                 Huỷ
@@ -161,40 +253,7 @@ export const RoomPage = () => {
           </form>
         </ModalContent>
       </Modal>
-      {/* <Modal isOpen={open} onClose={onClose} size="sm" isCentered>
-        <ModalOverlay />
-        <ModalContent bg={modalBg} borderRadius="lg" p={4}>
-          <ModalHeader>
-            {editingRoom ? 'Cập nhật phòng' : 'Thêm phòng mới'}
-          </ModalHeader>
-          <CloseButton
-            position="absolute"
-            right="8px"
-            top="8px"
-            onClick={onClose}
-          />
-          <ModalBody>
-            <Input
-              placeholder="Tên phòng"
-              mb={4}
-              value={formData.name}
-              onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
-            />
-            <Input
-              placeholder="Sức chứa"
-              type="number"
-              value={formData.capacity}
-              onChange={(e) => setFormData((f) => ({ ...f, capacity: e.target.value }))}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="teal" mr={3} onClick={handleSubmit}>
-              Lưu
-            </Button>
-            <Button onClick={onClose}>Huỷ</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal> */}
+      </Box>
     </Box>
   );
 };

@@ -5,6 +5,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { RoomPage } from "@/pages/RoomPage";
 
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { ROUTE_PATH } from "./routes.constant";
 
 export const router = createBrowserRouter([
   {
@@ -22,7 +23,7 @@ export const router = createBrowserRouter([
         element: <DashboardHome />,
       },
       {
-        path: "rooms",
+        path: ROUTE_PATH.ROOMS,
         element: <RoomPage />,
       },
       {

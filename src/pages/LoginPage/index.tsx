@@ -13,6 +13,7 @@ import { setAccessToken } from "@/stores/auth";
 import { useAuthLogin } from "@/hooks/useLogin";
 import type { LoginDto } from "@/api/auth";
 import { ROUTE_PATH } from "@/routes/routes.constant";
+import { toaster } from "@/components/UI/toaster";
 // import { toaster } from "@/components/UI/toaster";
 
 const schema = yup.object({
@@ -40,13 +41,13 @@ export const LoginPage = () => {
     formState: { errors },
   } = useForm<LoginDto>({ resolver: yupResolver(schema) });
 
-  // const handleShowToast = (message: string, status: "success" | "error") => {
-  //   toaster.create({
-  //     title: status === "success" ? "Thành công" : "Lỗi",
-  //     description: message,
-  //     duration: 3000,
-  //   });
-  // };
+  const handleShowToast = (message: string, status: "success" | "error") => {
+    toaster.create({
+      title: status === "success" ? "Thành công" : "Lỗi",
+      description: message,
+      duration: 3000,
+    });
+  };
 
   const { mutate, error, isPending } = useAuthLogin();
   const onSubmit = (data: LoginDto) => {
@@ -56,11 +57,11 @@ export const LoginPage = () => {
         setAccessToken(res.access_token);
         navigate(ROUTE_PATH.DASHBOARD);
         console.log("Redirecting to dashboard", ROUTE_PATH.DASHBOARD);
-        // handleShowToast('Đăng nhập thành công', 'success');
+        handleShowToast('Đăng nhập thành công', 'success');
       },
       onError: (err) => {
         console.error("Login failed", err);
-        // handleShowToast(err.message, 'error');
+        handleShowToast(err.message, 'error');
       },
     });
   };

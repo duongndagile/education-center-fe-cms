@@ -1,11 +1,7 @@
 import { RouterProvider } from "react-router-dom";
 import { router } from "./routes/routes";
 import { Provider } from "./components/UI/provider";
-import { createStandaloneToast } from "@chakra-ui/toast";
-
-const { ToastContainer } = createStandaloneToast({
-  defaultOptions: { duration: 3000, position: "top-right" },
-});
+import { ToastContainer } from "./helpers/toaster";
 
 function App() {
   return (

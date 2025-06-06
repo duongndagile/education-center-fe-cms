@@ -18,4 +18,7 @@ export const ROUTE_PATH = {
   EMAIL_VERIFICATION: '/email-verification',
 
   RESET_PASSWORD: '/reset-password',
+
+
+  ROOMS: '/rooms',
 };
