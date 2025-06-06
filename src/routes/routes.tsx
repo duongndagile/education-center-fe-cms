@@ -6,6 +6,7 @@ import { RoomPage } from "@/pages/RoomPage";
 
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ROUTE_PATH } from "./routes.constant";
+import { ClassPage } from "@/pages/ClassPage";
 
 export const router = createBrowserRouter([
   {
@@ -27,8 +28,8 @@ export const router = createBrowserRouter([
         element: <RoomPage />,
       },
       {
-        path: "classes",
-        // element: <RoomListPage />,
+        path: ROUTE_PATH.CLASSES,
+        element: <ClassPage />,
       },
       {
         path: "teachers",

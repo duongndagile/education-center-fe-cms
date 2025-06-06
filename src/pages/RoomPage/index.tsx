@@ -10,6 +10,7 @@ import {
   Spinner,
   Stack,
   IconButton,
+  Flex,
 } from "@chakra-ui/react";
 import {
   Modal,
@@ -19,8 +20,12 @@ import {
   ModalBody,
   ModalFooter,
 } from "@chakra-ui/modal";
-import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import { useForm } from "react-hook-form";
+import {
+  FormControl,
+  FormErrorMessage,
+  FormLabel,
+} from "@chakra-ui/form-control";
+import { useForm, type Resolver } from "react-hook-form";
 import { useEffect, useState } from "react";
 import {
   useCreateRoom,
@@ -31,6 +36,8 @@ import {
 import type { RoomFormValues } from "@/api/room";
 import { toaster } from "@/helpers/toaster";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 
 type Room = {
   _id: string;
@@ -42,12 +49,34 @@ type Room = {
   updatedAt?: string;
 };
 
+const validationSchema = yup.object({
+  name: yup.string().required("Name is required!"),
+  description: yup.string().optional(),
+  address: yup.string().optional(),
+  capacity: yup.string().required("Name is required!"),
+});
+
 export const RoomPage = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const { open, onOpen, onClose } = useDisclosure();
 
-  const { register, handleSubmit, reset } = useForm<RoomFormValues>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<RoomFormValues>({
+    resolver: yupResolver(
+      validationSchema
+    ) as unknown as Resolver<RoomFormValues>,
+    defaultValues: {
+      name: "",
+      capacity: 0,
+      description: "",
+      addressAt: "",
+    }
+  });
   const { mutate } = useCreateRoom();
   const { data: roomsData, isPending, mutate: getAllRooms } = useGetAllRooms();
   const { mutate: deleteRoom } = useDeleteRoom();
@@ -117,18 +146,25 @@ export const RoomPage = () => {
   };
 
   const handleAddRoom = () => {
-    reset();
     setEditingRoom(null);
+    reset({
+      name: "",
+      capacity: 0,
+      description: "",
+      addressAt: "",
+    });
     onOpen();
   };
 
   const handleEdit = (room: Room) => {
-    console.log("handleEdit", room);
-    reset();
+    reset({
+      name: room.name,
+      capacity: room.capacity,
+      description: room.description,
+      addressAt: room.address,
+    });
     setEditingRoom(room);
     onOpen();
-    // setEditingRoom(room);
-    // onOpen();
   };
 
   const handleDelete = (id: string) => {
@@ -201,35 +237,40 @@ export const RoomPage = () => {
         </Table.Body>
       </Table.Root>
 
-      <Box display="flex" justifyContent="center" alignItems="center">
-      <Modal isOpen={open} onClose={onClose} isCentered>
-        <ModalOverlay />
-        <ModalContent
-          bg="white"
-          borderRadius="lg"
-          px={6}
-          py={4}
-          maxW="500px"
-          boxShadow="lg"
-        >
-          <ModalHeader>{editingRoom ? "Sửa phòng" : "Thêm phòng"}</ModalHeader>
-          <CloseButton
-            position="absolute"
-            right="8px"
-            top="8px"
-            onClick={onClose}
-          />
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <ModalBody>
+      <Flex justifyContent="end" alignItems="center">
+        <Modal isOpen={open} onClose={onClose} isCentered>
+          <ModalOverlay />
+          <ModalContent
+            bg="white"
+            borderRadius="lg"
+            px={6}
+            py={4}
+            maxW="500px"
+            boxShadow="lg"
+          >
+            <ModalHeader>
+              {editingRoom ? "Sửa phòng" : "Thêm phòng"}
+            </ModalHeader>
+            <CloseButton
+              position="absolute"
+              right="8px"
+              top="8px"
+              onClick={onClose}
+            />
+            <form onSubmit={handleSubmit(onSubmit)}>
               <ModalBody>
                 <FormControl isRequired mb={4}>
                   <FormLabel>Tên phòng</FormLabel>
                   <Input {...register("name", { required: true })} />
+                  <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
                 </FormControl>
 
                 <FormControl>
                   <FormLabel>Sức chứa</FormLabel>
                   <Input {...register("capacity")} />
+                  <FormErrorMessage>
+                    {errors.capacity?.message}
+                  </FormErrorMessage>
                 </FormControl>
                 <FormControl>
                   <FormLabel>Mô tả</FormLabel>
@@ -241,19 +282,18 @@ export const RoomPage = () => {
                   <Input {...register("addressAt")} />
                 </FormControl>
               </ModalBody>
-            </ModalBody>
-            <ModalFooter>
-              <Button onClick={onClose} mr={3}>
-                Huỷ
-              </Button>
-              <Button type="submit" colorScheme="teal">
-                {editingRoom ? "Lưu thay đổi" : "Thêm"}
-              </Button>
-            </ModalFooter>
-          </form>
-        </ModalContent>
-      </Modal>
-      </Box>
+              <ModalFooter>
+                <Button onClick={onClose} mr={3}>
+                  Huỷ
+                </Button>
+                <Button type="submit" colorScheme="teal">
+                  {editingRoom ? "Lưu thay đổi" : "Thêm"}
+                </Button>
+              </ModalFooter>
+            </form>
+          </ModalContent>
+        </Modal>
+      </Flex>
     </Box>
   );
 };
