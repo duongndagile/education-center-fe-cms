@@ -59,7 +59,7 @@ export const ClassPage = () => {
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const { open, onOpen, onClose } = useDisclosure();
 
-  const { data: roomsData, mutate: getAllRooms } = useGetAllRooms();
+  const { data: roomsData, refetch } = useGetAllRooms();
   //   const { data: teachers = [] } = useGetAllTeachers();
 const roomMap = useMemo(() => {
   const map = new Map<string, string>();
@@ -88,8 +88,8 @@ const roomMap = useMemo(() => {
 
   useEffect(() => {
     getAllClasses();
-    getAllRooms();
-  }, [getAllClasses, getAllRooms]);
+    // getAllRooms();
+  }, [getAllClasses]);
 
   useEffect(() => {
     if (classData && Array.isArray(classData)) {
@@ -117,8 +117,10 @@ const roomMap = useMemo(() => {
         onSuccess: (response) => {
           setClasses((prev) => [...prev, response]);
           handleShowToast("Đã thêm lớp thành công", "success");
+          refetch();
           onClose();
           reset();
+          console.log("refetchhhh1");
         },
         onError: (error: any) => {
           console.error("Failed to create class:", error);

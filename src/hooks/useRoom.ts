@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { roomApi } from "@/api/room";
 import type { RoomFormValues } from "@/api/room";
 
@@ -9,8 +9,9 @@ export const useCreateRoom = () => {
 };
 
 export const useGetAllRooms = () => {
-  return useMutation({
-    mutationFn: () => roomApi.getAll(),
+  return useQuery({
+    queryKey: ['rooms'],
+    queryFn: () => roomApi.getAll()
   });
 };
 

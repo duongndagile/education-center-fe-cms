@@ -57,7 +57,7 @@ const validationSchema = yup.object({
 });
 
 export const RoomPage = () => {
-  const [rooms, setRooms] = useState<Room[]>([]);
+  // const [rooms, setRooms] = useState<Room[]>([]);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const { open, onOpen, onClose } = useDisclosure();
 
@@ -78,19 +78,18 @@ export const RoomPage = () => {
     }
   });
   const { mutate } = useCreateRoom();
-  const { data: roomsData, isPending, mutate: getAllRooms } = useGetAllRooms();
+  const { isPending, refetch, data: roomsData } = useGetAllRooms();
   const { mutate: deleteRoom } = useDeleteRoom();
   const { mutate: updateRoom } = useUpdateRoom();
+  // useEffect(() => {
+  //   getAllRooms();
+  // }, [getAllRooms]);
 
-  useEffect(() => {
-    getAllRooms();
-  }, [getAllRooms]);
-
-  useEffect(() => {
-    if (roomsData) {
-      setRooms(roomsData);
-    }
-  }, [roomsData]);
+  // useEffect(() => {
+  //   if (roomsData) {
+  //     setRooms(roomsData);
+  //   }
+  // }, [roomsData]);
 
   useEffect(() => {
     if (editingRoom) {
@@ -109,10 +108,12 @@ export const RoomPage = () => {
         { id: editingRoom._id, data },
         {
           onSuccess: () => {
+            refetch();
+            console.log("refetchhhh2");
             handleShowToast("Cập nhật phòng thành công", "success");
             setEditingRoom(null);
             onClose();
-            getAllRooms();
+            // getAllRooms();
           },
           onError: (error: any) => {
             console.error("Failed to update room:", error);
@@ -122,11 +123,12 @@ export const RoomPage = () => {
       );
     } else {
       mutate(data, {
-        onSuccess: (response) => {
-          setRooms((prev) => [...prev, response]);
+        onSuccess: () => {
+          // setRooms((prev) => [...prev, response]);
           handleShowToast("Đã thêm phòng thành công", "success");
           onClose();
           reset();
+          refetch();
         },
         onError: (error: any) => {
           console.error("Failed to create room:", error);
@@ -172,7 +174,7 @@ export const RoomPage = () => {
       onSuccess: (response) => {
         console.log("Delete room successful", response);
         handleShowToast("Đã xoá phòng thành công", "success");
-        getAllRooms();
+        refetch();
       },
       onError: (error: any) => {
         console.error("Delete room failed", error);
@@ -207,7 +209,7 @@ export const RoomPage = () => {
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {rooms?.map((item, index) => (
+          {roomsData?.map((item, index) => (
             <Table.Row key={`${Date.now()}-${index}`}>
               <Table.Cell>{item.name}</Table.Cell>
               <Table.Cell>{item.capacity}</Table.Cell>
