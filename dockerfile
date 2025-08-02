@@ -7,6 +7,8 @@ RUN npm install -g pnpm
 # Thiết lập thư mục làm việc
 WORKDIR /app
 
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 # Copy package.json và pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml ./
 
